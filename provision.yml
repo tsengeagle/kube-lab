@@ -1,0 +1,61 @@
+- hosts: all
+  become: yes
+  vars:
+    packages:
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      
+  tasks:
+    - name: 安裝development group
+      yum:
+        name: "@Development tools"
+        state: present
+
+    - name: 加docker repo
+      get_url:
+        url: https://download.docker.com/linux/centos/docker-ce.repo
+        dest: /etc/yum.repos.d/docker-ce.repo
+
+    - name: 安裝套件
+      yum:
+        name: "{{ packages }}"
+        state: present
+      notify: restart docker
+
+    - name: vagrant進入docker群組
+      user:
+        name: vagrant
+        group: docker
+        append: yes
+
+    - name: 安裝lxcfs
+      yum: 
+        name: https://copr-be.cloud.fedoraproject.org/results/ganto/lxd/epel-7-x86_64/00486278-lxcfs/lxcfs-2.0.5-3.el7.centos.x86_64.rpm
+        state: present
+      notify: restart lxcfs
+
+  handlers:
+    - name: restart docker
+      service: 
+        name: docker
+        state: restarted
+        enabled: yes
+    
+    - name: restart lxcfs
+      service:
+        name: lxcfs
+        state: restarted
+        enabled: yes
+
+# 12      sudo yum install -y yum-utils device-mapper-persistent-data lvm2
+# 1     sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+# 2     sudo yum install -y docker-ce docker-ce-cli containerd.io
+# 3     sudo usermod -aG docker vagrant
+# 4     sudo systemctl start docker
+# 5     curl https://copr-be.cloud.fedoraproject.org/results/ganto/lxd/epel-7-x86_64/00486278-lxcfs/lxcfs-2.0.5-3.el7.centos.x86_64.rpm -o /tmp/lxcfs-2    .0.5-3.el7.centos.x86_64.rpm
+# 6     sudo yum install -y /tmp/lxcfs-2.0.5-3.el7.centos.x86_64.rpm
+# 7     sudo systemctl start lxcfs
